@@ -70,6 +70,9 @@ class ResponseGenerator:
         try:
             # Generate response using Ollama
             response_text = self._call_ollama(prompt)
+            if self._is_generation_error(response_text):
+                logger.warning("LLM generation failed; using knowledge-base fallback response")
+                response_text = self._fallback_response_from_docs(query, retrieved_docs, persona)
             
             result = {
                 "response": response_text,
@@ -214,13 +217,44 @@ Conversation History:
             logger.error(f"Error calling Ollama: {str(e)}")
             return f"Error generating response: {str(e)}"
 
+    def _is_generation_error(self, response_text: str) -> bool:
+        """Detect transport/model errors returned by the local LLM call."""
+        error_prefixes = (
+            "Unable to connect to Ollama service.",
+            "Error generating response",
+        )
+        return response_text.startswith(error_prefixes)
+
+    def _fallback_response_from_docs(
+        self,
+        query: str,
+        retrieved_docs: List[Dict],
+        persona: Persona
+    ) -> str:
+        """Build a concise support answer directly from retrieved KB snippets."""
+        top_doc = retrieved_docs[0]
+        content = top_doc.get("content", "").strip()
+        source = top_doc.get("source", "knowledge base").split("\\")[-1].split("/")[-1]
+
+        if len(content) > 900:
+            content = content[:900].rsplit(" ", 1)[0] + "..."
+
+        if persona == Persona.FRUSTRATED_USER:
+            intro = "I found a relevant support article. Let's try these steps:"
+        elif persona == Persona.BUSINESS_EXECUTIVE:
+            intro = "I found relevant guidance in our support documentation:"
+        else:
+            intro = "I found relevant technical documentation for this issue:"
+
+        return f"{intro}\n\n{content}\n\nSource: {source}"
+
     def _calculate_confidence(self, retrieved_docs: List[Dict]) -> float:
         """Calculate confidence based on retrieval scores"""
         if not retrieved_docs:
             return 0.0
         
-        avg_similarity = sum(doc.get("similarity", 0) for doc in retrieved_docs) / len(retrieved_docs)
-        return avg_similarity
+        similarities = [doc.get("similarity", 0) for doc in retrieved_docs]
+        return max(similarities)
 
     def _no_docs_response(self, query: str, persona: Persona) -> Dict:
         """Generate response when no relevant documents found"""

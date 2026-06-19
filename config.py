@@ -19,7 +19,7 @@ class Config:
     CHUNK_OVERLAP = int(os.getenv("CHUNK_OVERLAP", "100"))
     
     # Application Configuration
-    ESCALATION_THRESHOLD = float(os.getenv("ESCALATION_THRESHOLD", "0.5"))
+    ESCALATION_THRESHOLD = float(os.getenv("ESCALATION_THRESHOLD", "0.35"))
     MAX_CONTEXT_TOKENS = int(os.getenv("MAX_CONTEXT_TOKENS", "4000"))
     TOP_K_RETRIEVAL = int(os.getenv("TOP_K_RETRIEVAL", "5"))
     

@@ -9,6 +9,7 @@ import logging
 from typing import Dict, List, Optional, Tuple
 from datetime import datetime
 from src.persona_detector import Persona
+from config import config
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +28,7 @@ class EscalationHandler:
     def __init__(self):
         """Initialize escalation handler"""
         self.max_attempts = 3
-        self.confidence_threshold = 0.6
+        self.confidence_threshold = config.ESCALATION_THRESHOLD
 
     def should_escalate(
         self,

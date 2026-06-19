@@ -15,7 +15,6 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.document_loaders import (
     TextLoader, 
     DirectoryLoader,
-    UnstructuredMarkdownLoader
 )
 from config import config
 
@@ -78,7 +77,8 @@ class RAGPipeline:
         md_loader = DirectoryLoader(
             str(docs_path),
             glob="*.md",
-            loader_cls=UnstructuredMarkdownLoader
+            loader_cls=TextLoader,
+            loader_kwargs={"encoding": "utf-8"}
         )
         
         try:
@@ -88,7 +88,8 @@ class RAGPipeline:
             # Process each document
             for doc in documents:
                 try:
-                    self._process_document(doc)
+                    chunks_created = self._process_document(doc)
+                    stats["chunks_created"] += chunks_created
                 except Exception as e:
                     error_msg = f"Error processing {doc.metadata.get('source', 'unknown')}: {str(e)}"
                     logger.error(error_msg)
@@ -103,7 +104,7 @@ class RAGPipeline:
         
         return stats
 
-    def _process_document(self, document):
+    def _process_document(self, document) -> int:
         """Process a single document and add to collection"""
         source = document.metadata.get("source", "unknown")
         content = document.page_content
@@ -126,6 +127,7 @@ class RAGPipeline:
             )
         
         logger.debug(f"Processed {source}: {len(chunks)} chunks")
+        return len(chunks)
 
     def retrieve(self, query: str, top_k: int = None) -> List[Dict]:
         """
